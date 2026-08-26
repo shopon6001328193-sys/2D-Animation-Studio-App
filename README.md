@@ -20,8 +20,8 @@ Then visit `http://localhost:8000`.
 - Add, duplicate, delete, and reorder frames; control playback FPS and enable
   onion skinning.
 - Resize or recolor the brush, zoom the drawing surface, undo/redo, save the
-  editable project as JSON, reopen a saved project, and export every animation
-  frame as a PNG.
+  editable project as JSON, reopen a saved project, place image or character
+  assets on their own layers, and export every animation frame as a PNG.
 - Works with mouse, pen, and touch input.
 
 ## Project structure
