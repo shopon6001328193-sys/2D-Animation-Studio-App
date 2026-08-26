@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Motion Studio — 2D Animation</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">M</span><span>Motion <b>Studio</b></span></div>
+    <div class="project-name"><span class="status-dot"></span><input id="projectName" aria-label="Project name" value="Untitled animation"></div>
+    <div class="header-actions"><button id="newProject" title="New project">New</button><button id="saveProject">Save JSON</button><label class="button secondary">Import<input id="importProject" type="file" accept="application/json,.json" hidden></label><button id="exportFrames" class="accent">Export PNGs</button></div>
+  </header>
+  <main class="workspace">
+    <aside class="toolbar panel" aria-label="Drawing tools">
+      <button class="tool active" data-tool="brush" title="Brush"><span>✎</span><small>Brush</small></button><button class="tool" data-tool="eraser" title="Eraser"><span>⌫</span><small>Erase</small></button>
+      <button class="tool" data-tool="line" title="Line"><span>╱</span><small>Line</small></button><button class="tool" data-tool="rect" title="Rectangle"><span>□</span><small>Rect</small></button><button class="tool" data-tool="circle" title="Circle"><span>○</span><small>Circle</small></button><i></i>
+      <button id="undo" class="tool" title="Undo"><span>↶</span><small>Undo</small></button><button id="redo" class="tool" title="Redo"><span>↷</span><small>Redo</small></button><button id="clearCanvas" class="tool danger" title="Clear layer"><span>✕</span><small>Clear</small></button>
+    </aside>
+    <section class="editor">
+      <div class="canvas-bar"><div class="breadcrumbs">Scene 01 <span>›</span> <b id="frameLabel">Frame 01</b></div><div class="canvas-actions"><label><input id="onion" type="checkbox"> Onion skin</label><button id="zoomOut">−</button><span id="zoomValue">100%</span><button id="zoomIn">+</button><button id="zoomReset">Fit</button></div></div>
+      <div class="stage-wrap" id="stageWrap"><div class="stage" id="stage"><canvas id="onionCanvas"></canvas><canvas id="drawCanvas"></canvas></div></div>
+    </section>
+    <aside class="rightbar">
+      <section class="panel inspector"><h2>Brush settings</h2><label>Color <input id="color" type="color" value="#7868ff"></label><label>Size <output id="sizeOutput">8 px</output><input id="brushSize" type="range" min="1" max="60" value="8"></label><div class="brush-preview"><span id="brushDot"></span>Brush preview</div></section>
+      <section class="panel layers"><div class="panel-title"><h2>Layers</h2><button id="addLayer" title="Add layer">+</button></div><div id="layerList"></div></section>
+    </aside>
+  </main>
+  <footer class="timeline panel"><div class="playback"><button id="play" class="play" title="Play animation">▶</button><button id="prevFrame" title="Previous frame">‹</button><button id="nextFrame" title="Next frame">›</button><label>FPS <input id="fps" type="number" min="1" max="30" value="12"></label><span id="timeReadout">0:00 / 0:00</span></div><div class="frame-strip" id="frameStrip"></div><div class="frame-actions"><button id="addFrame">+ Frame</button><button id="duplicateFrame" title="Duplicate frame">⧉</button><button id="deleteFrame" class="danger" title="Delete frame">⌫</button></div></footer>
+  <div id="toast" role="status" aria-live="polite"></div><script src="app.js"></script>
+</body></html>
