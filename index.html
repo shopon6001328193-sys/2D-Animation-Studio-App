@@ -17,8 +17,8 @@
       <button id="undo" class="tool" title="Undo"><span>↶</span><small>Undo</small></button><button id="redo" class="tool" title="Redo"><span>↷</span><small>Redo</small></button><button id="clearCanvas" class="tool danger" title="Clear layer"><span>✕</span><small>Clear</small></button>
     </aside>
     <section class="editor">
-      <div class="canvas-bar"><div class="breadcrumbs">Scene 01 <span>›</span> <b id="frameLabel">Frame 01</b></div><div class="canvas-actions"><label><input id="onion" type="checkbox"> Onion skin</label><button id="zoomOut">−</button><span id="zoomValue">100%</span><button id="zoomIn">+</button><button id="zoomReset">Fit</button></div></div>
-      <div class="stage-wrap" id="stageWrap"><div class="stage" id="stage"><canvas id="onionCanvas"></canvas><canvas id="drawCanvas"></canvas></div></div>
+      <div class="canvas-bar"><div class="breadcrumbs">Scene 01 <span>›</span> <b id="frameLabel">Frame 01</b></div><div class="canvas-actions"><label class="button import-image" title="Place an image or character"><span>Image</span><input id="importImage" type="file" accept="image/*" hidden></label><label><input id="onion" type="checkbox"> Onion skin</label><button id="zoomOut">−</button><span id="zoomValue">100%</span><button id="zoomIn">+</button><button id="zoomReset">Fit</button></div></div>
+      <div class="stage-wrap" id="stageWrap"><div class="stage" id="stage"><canvas id="onionCanvas"></canvas><canvas id="belowCanvas"></canvas><canvas id="drawCanvas"></canvas><canvas id="aboveCanvas"></canvas></div></div>
     </section>
     <aside class="rightbar">
       <section class="panel inspector"><h2>Brush settings</h2><label>Color <input id="color" type="color" value="#7868ff"></label><label>Size <output id="sizeOutput">8 px</output><input id="brushSize" type="range" min="1" max="60" value="8"></label><div class="brush-preview"><span id="brushDot"></span>Brush preview</div></section>
