@@ -6,9 +6,9 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">M</span><span>Motion <b>Studio</b></span></div>
+    <div class="brand"><span class="brand-mark">M</span><span class="brand-name">Motion <b>Studio</b></span></div>
     <div class="project-name"><span class="status-dot"></span><input id="projectName" aria-label="Project name" value="Untitled animation"></div>
-    <div class="header-actions"><button id="newProject" title="New project">New</button><button id="saveProject">Save JSON</button><label class="button secondary">Import<input id="importProject" type="file" accept="application/json,.json" hidden></label><button id="exportFrames" class="accent">Export PNGs</button></div>
+    <div class="header-actions"><button id="newProject" title="New project">New</button><button id="saveProject">Save<span class="action-label"> JSON</span></button><label class="button secondary" title="Import project">Import<input id="importProject" type="file" accept="application/json,.json" hidden></label><button id="exportFrames" class="accent">Export<span class="action-label"> PNGs</span></button></div>
   </header>
   <main class="workspace">
     <aside class="toolbar panel" aria-label="Drawing tools">
@@ -22,7 +22,7 @@
     </section>
     <aside class="rightbar">
       <section class="panel inspector"><h2>Brush settings</h2><label>Color <input id="color" type="color" value="#7868ff"></label><label>Size <output id="sizeOutput">8 px</output><input id="brushSize" type="range" min="1" max="60" value="8"></label><div class="brush-preview"><span id="brushDot"></span>Brush preview</div></section>
-      <section class="panel layers"><div class="panel-title"><h2>Layers</h2><button id="addLayer" title="Add layer">+</button></div><div id="layerList"></div></section>
+      <section class="panel layers"><div class="panel-title"><h2>Layers</h2><button id="addLayer" title="Add layer" aria-label="Add layer">+</button></div><div id="layerList"></div><p class="layer-help">Tap a layer to draw. Use the arrows to reorder it.</p></section>
     </aside>
   </main>
   <footer class="timeline panel"><div class="playback"><button id="play" class="play" title="Play animation">▶</button><button id="prevFrame" title="Previous frame">‹</button><button id="nextFrame" title="Next frame">›</button><label>FPS <input id="fps" type="number" min="1" max="30" value="12"></label><span id="timeReadout">0:00 / 0:00</span></div><div class="frame-strip" id="frameStrip"></div><div class="frame-actions"><button id="addFrame">+ Frame</button><button id="duplicateFrame" title="Duplicate frame">⧉</button><button id="deleteFrame" class="danger" title="Delete frame">⌫</button></div></footer>
