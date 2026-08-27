@@ -8,7 +8,7 @@
   <header class="topbar">
     <div class="brand"><span class="brand-mark">M</span><span class="brand-name">Motion <b>Studio</b></span></div>
     <div class="project-name"><span class="status-dot"></span><input id="projectName" aria-label="Project name" value="Untitled animation"></div>
-    <div class="header-actions"><button id="newProject" title="New project">New</button><button id="saveProject">Save<span class="action-label"> JSON</span></button><label class="button secondary" title="Import project">Import<input id="importProject" type="file" accept="application/json,.json" hidden></label><button id="exportFrames" class="accent">Export<span class="action-label"> PNGs</span></button></div>
+    <div class="header-actions"><button id="newProject" title="New project">New</button><button id="assetsToggle" title="Show assets">Assets</button><button id="saveProject">Save<span class="action-label"> JSON</span></button><label class="button secondary" title="Import project">Import<input id="importProject" type="file" accept="application/json,.json" hidden></label><button id="exportFrames" class="accent">Export<span class="action-label"> PNGs</span></button></div>
   </header>
   <main class="workspace">
     <aside class="toolbar panel" aria-label="Drawing tools">
@@ -20,11 +20,12 @@
       <div class="canvas-bar"><div class="breadcrumbs">Scene 01 <span>›</span> <b id="frameLabel">Frame 01</b></div><div class="canvas-actions"><label><input id="onion" type="checkbox"> Onion skin</label><button id="zoomOut">−</button><span id="zoomValue">100%</span><button id="zoomIn">+</button><button id="zoomReset">Fit</button></div></div>
       <div class="stage-wrap" id="stageWrap"><div class="stage" id="stage"><canvas id="onionCanvas"></canvas><canvas id="drawCanvas"></canvas></div></div>
     </section>
-    <aside class="rightbar">
+    <aside class="rightbar" id="rightbar">
+      <section class="panel assets"><div class="panel-title"><h2>Assets</h2><label class="asset-add" title="Import image or character">+ Add<input id="importAsset" type="file" accept="image/*" multiple hidden></label></div><p class="asset-help">Import characters or images, then tap one to add it to this frame.</p><div id="assetList" class="asset-list"></div><p id="assetEmpty" class="asset-empty">Your imported assets will appear here.</p></section>
       <section class="panel inspector"><h2>Brush settings</h2><label>Color <input id="color" type="color" value="#7868ff"></label><label>Size <output id="sizeOutput">8 px</output><input id="brushSize" type="range" min="1" max="60" value="8"></label><div class="brush-preview"><span id="brushDot"></span>Brush preview</div></section>
       <section class="panel layers"><div class="panel-title"><h2>Layers</h2><button id="addLayer" title="Add layer" aria-label="Add layer">+</button></div><div id="layerList"></div><p class="layer-help">Tap a layer to draw. Use the arrows to reorder it.</p></section>
     </aside>
   </main>
-  <footer class="timeline panel"><div class="playback"><button id="play" class="play" title="Play animation">▶</button><button id="prevFrame" title="Previous frame">‹</button><button id="nextFrame" title="Next frame">›</button><label>FPS <input id="fps" type="number" min="1" max="30" value="12"></label><span id="timeReadout">0:00 / 0:00</span></div><div class="frame-strip" id="frameStrip"></div><div class="frame-actions"><button id="addFrame">+ Frame</button><button id="duplicateFrame" title="Duplicate frame">⧉</button><button id="deleteFrame" class="danger" title="Delete frame">⌫</button></div></footer>
+  <footer class="timeline panel"><div class="playback"><button id="play" class="play" title="Play animation">▶</button><button id="prevFrame" title="Previous frame">‹</button><button id="nextFrame" title="Next frame">›</button><label>FPS <select id="fps" aria-label="Frames per second"><option value="6">6</option><option value="8">8</option><option value="12" selected>12</option><option value="24">24</option><option value="30">30</option></select></label><span id="timeReadout">0:00 / 0:00</span></div><div class="frame-strip" id="frameStrip" aria-label="Animation frames"></div><div class="frame-actions"><button id="addFrame">+ Frame</button><button id="duplicateFrame" title="Duplicate current frame">⧉ Duplicate</button><button id="clearFrame" title="Clear current frame">✕ Clear</button><button id="deleteFrame" class="danger" title="Delete current frame">⌫ Delete</button></div></footer>
   <div id="toast" role="status" aria-live="polite"></div><script src="app.js"></script>
 </body></html>
