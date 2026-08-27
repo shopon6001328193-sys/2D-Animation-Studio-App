@@ -34,13 +34,13 @@ Return ONLY valid JSON with this exact shape:
   "description": "...",
   "hashtags": ["#..."],
   "tags": ["..."],
-  "narration": "Bangla narration, 55-80 words",
+  "narration": "Bangla narration, 55-70 words",
   "scenes": [
-    {"prompt": "vertical 9:16 visual prompt", "duration": 4},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 4},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 4},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 4},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 4}
+    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
+    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
+    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
+    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
+    {"prompt": "vertical 9:16 visual prompt", "duration": 5}
   ]
 }
 Keep the same main animal and visual identity across all scenes. Make the story original and comedic. Do not mention real people, copyrighted characters, movie/game characters, or existing brands.
@@ -86,14 +86,17 @@ def run_ffmpeg(args):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *args], check=True)
 
 
-def render_video(scene_paths, audio_path, output_path):
+def render_video(scenes, audio_path, output_path):
     clips = []
-    for i, image_path in enumerate(scene_paths):
+    for i, scene in enumerate(scenes):
+        image_path = WORK / f"image_{i}.png"
+        generate_image(scene["prompt"], image_path)
         clip = WORK / f"scene_{i}.mp4"
         clips.append(clip)
+        duration = max(3, min(8, int(scene.get("duration", 5))))
         run_ffmpeg([
             "-loop", "1", "-i", str(image_path),
-            "-t", "4",
+            "-t", str(duration),
             "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=yuv420p",
             "-r", "30",
             "-an", str(clip),
@@ -157,17 +160,11 @@ def main():
     content = ask_for_content()
     (WORK / "content.json").write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    scene_paths = []
-    for i, scene in enumerate(content["scenes"]):
-        image_path = WORK / f"image_{i}.png"
-        generate_image(scene["prompt"], image_path)
-        scene_paths.append(image_path)
-
     audio_path = WORK / "narration.mp3"
     generate_voice(content["narration"], audio_path)
 
     output_path = WORK / "output.mp4"
-    render_video(scene_paths, audio_path, output_path)
+    render_video(content["scenes"], audio_path, output_path)
     upload_video(output_path, content)
 
 
