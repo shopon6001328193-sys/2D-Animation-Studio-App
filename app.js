@@ -6,7 +6,8 @@ const makeCanvas = () => Object.assign(document.createElement('canvas'), { width
 const blank = () => makeCanvas().toDataURL('image/png');
 const freshLayer = (name = 'Layer 1') => ({ name, visible: true, image: blank() });
 const newFrame = () => ({ layers: [freshLayer()] });
-const state = { name: 'Untitled animation', fps: 12, frames: [newFrame()], frame: 0, layer: 0, tool: 'brush', color: '#7868ff', size: 8, zoom: 1, onion: false, playing: false, history: [], future: [] };
+const FPS_VALUES = [6, 8, 12, 15, 24, 30, 60];
+const state = { name: 'Untitled animation', fps: 12, frames: [newFrame()], assets: [], frame: 0, layer: 0, tool: 'brush', color: '#7868ff', size: 8, zoom: 1, onion: false, playing: false, loop: true, history: [], future: [] };
 const draw = $('#drawCanvas'), below = $('#belowCanvas'), above = $('#aboveCanvas'), onion = $('#onionCanvas');
 const ctx = draw.getContext('2d'), bctx = below.getContext('2d'), actx = above.getContext('2d'), octx = onion.getContext('2d');
 [draw, below, above, onion].forEach(canvas => { canvas.width = W; canvas.height = H; });
@@ -44,10 +45,11 @@ async function render() {
   }
   if (layer().visible) await paintImage(ctx, layer().image, 0, 0);
   if (version !== renderVersion) return;
-  renderLayers(); await renderFrames(version); if (version !== renderVersion) return;
+  renderLayers(); renderAssets(); await renderFrames(version); if (version !== renderVersion) return;
   updateReadout(); updateHistoryButtons(); $('#frameLabel').textContent = `Frame ${String(state.frame + 1).padStart(2, '0')}`;
 }
-function updateReadout() { const duration = state.frames.length / state.fps; $('#timeReadout').textContent = `0:00 / 0:${String(Math.floor(duration)).padStart(2, '0')}`; }
+function formatTime(seconds) { const minutes = Math.floor(seconds / 60); return `${minutes}:${(seconds % 60).toFixed(2).padStart(5, '0')}`; }
+function updateReadout() { $('#timeReadout').textContent = `${formatTime(state.frame / state.fps)} / ${formatTime(state.frames.length / state.fps)}`; }
 function renderLayers() {
   $('#layerList').innerHTML = active().layers.map((item, index) => `<div class="layer-row ${index === state.layer ? 'active' : ''}" data-layer="${index}">
     <button class="eye" data-eye="${index}" aria-label="Toggle ${escapeHtml(item.name)} visibility">${item.visible ? '◉' : '○'}</button><input value="${escapeHtml(item.name)}" aria-label="Layer name"><span class="layer-actions"><button data-move="up" title="Move layer up" aria-label="Move layer up">↑</button><button data-move="down" title="Move layer down" aria-label="Move layer down">↓</button><button data-remove="${index}" title="Delete layer" aria-label="Delete layer">×</button></span></div>`).join('');
@@ -56,6 +58,11 @@ function renderLayers() {
   $$('.layer-row input').forEach((input, index) => input.onchange = () => { const name = input.value.trim() || `Layer ${index + 1}`; if (name !== active().layers[index].name) { snapshot(); active().layers[index].name = name; } renderLayers(); });
   $$('[data-move]').forEach(button => button.onclick = event => { event.stopPropagation(); const from = +button.closest('.layer-row').dataset.layer, to = from + (button.dataset.move === 'up' ? 1 : -1); if (to < 0 || to >= active().layers.length) return; snapshot(); [active().layers[from], active().layers[to]] = [active().layers[to], active().layers[from]]; state.layer = to; render(); });
   $$('[data-remove]').forEach(button => button.onclick = event => { event.stopPropagation(); if (active().layers.length === 1) return toast('Keep at least one layer'); snapshot(); active().layers.splice(+button.dataset.remove, 1); state.layer = Math.min(state.layer, active().layers.length - 1); render(); });
+}
+function renderAssets() {
+  $('#assetCount').textContent = state.assets.length;
+  $('#assetList').innerHTML = state.assets.map((asset, index) => `<button class="asset" data-asset="${index}" title="Place ${escapeHtml(asset.name)}"><img src="${asset.image}" alt=""><span>${escapeHtml(asset.name)}</span></button>`).join('') || '<p class="empty-assets">No assets yet</p>';
+  $$('.asset').forEach(button => button.onclick = () => placeAsset(state.assets[+button.dataset.asset]));
 }
 function escapeHtml(value) { const node = document.createElement('div'); node.textContent = value; return node.innerHTML; }
 async function renderFrames(version) {
@@ -89,22 +96,35 @@ $('#addFrame').onclick = () => addFrame(); $('#duplicateFrame').onclick = () => 
 $('#deleteFrame').onclick = () => { if (state.frames.length === 1) return toast('Keep at least one frame'); snapshot(); state.frames.splice(state.frame, 1); state.frame = Math.max(0, state.frame - 1); state.layer = 0; render(); };
 $('#prevFrame').onclick = () => { state.frame = (state.frame - 1 + state.frames.length) % state.frames.length; state.layer = 0; render(); };
 $('#nextFrame').onclick = () => { state.frame = (state.frame + 1) % state.frames.length; state.layer = 0; render(); };
-$('#fps').onchange = event => { state.fps = Math.max(1, Math.min(30, +event.target.value || 12)); event.target.value = state.fps; updateReadout(); if (state.playing) startPlayback(); };
+$('#fps').onchange = event => { state.fps = FPS_VALUES.includes(+event.target.value) ? +event.target.value : 12; event.target.value = state.fps; updateReadout(); if (state.playing) { playbackStarted = performance.now(); playbackStartFrame = state.frame; } };
 $('#onion').onchange = event => { state.onion = event.target.checked; render(); };
 function zoom(value) { state.zoom = Math.max(.35, Math.min(1.6, value)); $('#stage').style.transform = `scale(${state.zoom})`; $('#zoomValue').textContent = `${Math.round(state.zoom * 100)}%`; }
 $('#zoomIn').onclick = () => zoom(state.zoom + .15); $('#zoomOut').onclick = () => zoom(state.zoom - .15); $('#zoomReset').onclick = () => zoom(1);
-let timer;
-function stopPlayback() { state.playing = false; clearInterval(timer); $('#play').textContent = '▶'; $('#play').setAttribute('aria-label', 'Play animation'); }
-function startPlayback() { clearInterval(timer); state.playing = true; $('#play').textContent = '❚❚'; $('#play').setAttribute('aria-label', 'Pause animation'); timer = setInterval(() => { state.frame = (state.frame + 1) % state.frames.length; state.layer = 0; render(); }, 1000 / state.fps); }
+let animationFrame, playbackStarted = 0, playbackStartFrame = 0;
+function stopPlayback() { state.playing = false; cancelAnimationFrame(animationFrame); $('#play').textContent = '▶'; $('#play').setAttribute('aria-label', 'Play animation'); }
+function playbackTick(now) {
+  if (!state.playing) return;
+  const elapsedFrames = Math.floor((now - playbackStarted) * state.fps / 1000);
+  let next = playbackStartFrame + elapsedFrames;
+  if (!state.loop && next >= state.frames.length) { state.frame = state.frames.length - 1; render(); stopPlayback(); return; }
+  next %= state.frames.length;
+  if (next !== state.frame) { state.frame = next; state.layer = 0; render(); }
+  animationFrame = requestAnimationFrame(playbackTick);
+}
+function startPlayback() { state.playing = true; playbackStarted = performance.now(); playbackStartFrame = state.frame; $('#play').textContent = '❚❚'; $('#play').setAttribute('aria-label', 'Pause animation'); cancelAnimationFrame(animationFrame); animationFrame = requestAnimationFrame(playbackTick); }
 $('#play').onclick = () => state.playing ? stopPlayback() : startPlayback();
+$('#loop').onclick = () => { state.loop = !state.loop; $('#loop').classList.toggle('active-loop', state.loop); $('#loop').setAttribute('aria-pressed', String(state.loop)); toast(state.loop ? 'Loop enabled' : 'Loop disabled'); };
 function download(blob, name) { const anchor = document.createElement('a'), url = URL.createObjectURL(blob); anchor.href = url; anchor.download = name; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); }
 function filename() { return ($('#projectName').value || 'animation').trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'animation'; }
-$('#newProject').onclick = () => { if (confirm('Start a new project? Unsaved edits will be lost.')) { stopPlayback(); state.frames = [newFrame()]; state.frame = state.layer = 0; state.history = []; state.future = []; state.name = 'Untitled animation'; $('#projectName').value = state.name; render(); } };
+$('#newProject').onclick = () => { if (confirm('Start a new project? Unsaved edits will be lost.')) { stopPlayback(); state.frames = [newFrame()]; state.assets = []; state.frame = state.layer = 0; state.history = []; state.future = []; state.name = 'Untitled animation'; $('#projectName').value = state.name; render(); } };
 $('#projectName').oninput = event => { state.name = event.target.value; };
-$('#saveProject').onclick = () => { const project = { version: 1, name: $('#projectName').value, fps: state.fps, frames: state.frames }; download(new Blob([JSON.stringify(project)], { type: 'application/json' }), `${filename()}.json`); toast('Project saved'); };
-function validProject(project) { return project && Array.isArray(project.frames) && project.frames.length && project.frames.every(frame => Array.isArray(frame.layers) && frame.layers.length && frame.layers.every(item => item && typeof item.image === 'string' && typeof item.name === 'string' && typeof item.visible === 'boolean')); }
-$('#importProject').onchange = event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const project = JSON.parse(reader.result); if (!validProject(project)) throw new Error('Invalid project'); stopPlayback(); state.frames = project.frames; state.fps = Math.max(1, Math.min(30, +project.fps || 12)); state.frame = state.layer = 0; state.history = []; state.future = []; $('#fps').value = state.fps; $('#projectName').value = project.name || 'Imported animation'; state.name = $('#projectName').value; render(); toast('Project imported'); } catch { toast('That is not a valid Motion Studio project'); } finally { event.target.value = ''; } }; reader.readAsText(file); };
-$('#importImage').onchange = event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async () => { const img = await image(reader.result); if (!img) return toast('Could not open that image'); snapshot(); const asset = makeCanvas(), assetCtx = asset.getContext('2d'), scale = Math.min(1, W / img.width, H / img.height); assetCtx.drawImage(img, (W - img.width * scale) / 2, (H - img.height * scale) / 2, img.width * scale, img.height * scale); active().layers.push({ name: file.name.replace(/\.[^.]+$/, '') || 'Image', visible: true, image: asset.toDataURL('image/png') }); state.layer = active().layers.length - 1; render(); toast('Image placed on a new layer'); }; reader.readAsDataURL(file); event.target.value = ''; };
+$('#saveProject').onclick = () => { const project = { version: 2, name: $('#projectName').value, fps: state.fps, frames: state.frames, assets: state.assets }; download(new Blob([JSON.stringify(project)], { type: 'application/json' }), `${filename()}.json`); toast('Project saved'); };
+function validAsset(item) { return item && typeof item.image === 'string' && typeof item.name === 'string'; }
+function validProject(project) { return project && Array.isArray(project.frames) && project.frames.length && project.frames.every(frame => Array.isArray(frame.layers) && frame.layers.length && frame.layers.every(item => validAsset(item) && typeof item.visible === 'boolean')) && (!project.assets || (Array.isArray(project.assets) && project.assets.every(validAsset))); }
+$('#importProject').onchange = event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const project = JSON.parse(reader.result); if (!validProject(project)) throw new Error('Invalid project'); stopPlayback(); state.frames = project.frames; state.assets = project.assets || []; state.fps = FPS_VALUES.includes(+project.fps) ? +project.fps : 12; state.frame = state.layer = 0; state.history = []; state.future = []; $('#fps').value = state.fps; $('#projectName').value = project.name || 'Imported animation'; state.name = $('#projectName').value; render(); toast('Project imported'); } catch { toast('That is not a valid Motion Studio project'); } finally { event.target.value = ''; } }; reader.readAsText(file); };
+async function normalizeAsset(file) { const source = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => resolve(reader.result); reader.readAsDataURL(file); }); const img = await image(source); if (!img) throw new Error('Unsupported image'); const canvas = makeCanvas(), assetCtx = canvas.getContext('2d'), scale = Math.min(1, W / img.width, H / img.height); assetCtx.drawImage(img, (W - img.width * scale) / 2, (H - img.height * scale) / 2, img.width * scale, img.height * scale); return { name: file.name.replace(/\.[^.]+$/, '') || 'Image', image: canvas.toDataURL('image/png') }; }
+function placeAsset(asset) { snapshot(); active().layers.push({ ...asset, visible: true }); state.layer = active().layers.length - 1; render(); toast(`${asset.name} placed on a new layer`); }
+$('#importImage').onchange = async event => { const files = [...event.target.files]; event.target.value = ''; if (!files.length) return; let imported = 0; for (const file of files) { try { const asset = await normalizeAsset(file); state.assets.push(asset); placeAsset(asset); imported++; } catch { toast(`Could not open ${file.name}`); } } if (imported > 1) toast(`${imported} assets imported and placed`); };
 $('#exportFrames').onclick = async () => { const button = $('#exportFrames'), previous = button.textContent; button.disabled = true; button.textContent = 'Exporting…'; try { for (let index = 0; index < state.frames.length; index++) { const canvas = makeCanvas(), exportCtx = canvas.getContext('2d'); for (const item of state.frames[index].layers) if (item.visible) await paintImage(exportCtx, item.image, 0, 0); const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png')); if (!blob) throw new Error('PNG unavailable'); download(blob, `${filename()}-frame-${String(index + 1).padStart(2, '0')}.png`); } toast(`${state.frames.length} PNG frame${state.frames.length === 1 ? '' : 's'} exported`); } catch { toast('Could not export this project'); } finally { button.disabled = false; button.textContent = previous; } };
 window.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? $('#redo').click() : $('#undo').click(); } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); $('#redo').click(); } });
 render();
