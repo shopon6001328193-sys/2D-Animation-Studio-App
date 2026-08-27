@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -18,32 +19,34 @@ YOUTUBE_CLIENT_ID = os.environ["YOUTUBE_CLIENT_ID"]
 YOUTUBE_CLIENT_SECRET = os.environ["YOUTUBE_CLIENT_SECRET"]
 YOUTUBE_REFRESH_TOKEN = os.environ["YOUTUBE_REFRESH_TOKEN"]
 YOUTUBE_PRIVACY = os.getenv("YOUTUBE_PRIVACY", "private")
+VIDEO_COUNT = int(os.getenv("VIDEO_COUNT", "5"))
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-def ask_for_content():
-    prompt = """
+def ask_for_content(index: int):
+    prompt = f"""
 You are the content director for a Bengali YouTube Shorts channel.
+Create concept #{index} of today's {VIDEO_COUNT} videos.
 Use web search to find current viral/trending themes from the last 24-72 hours, but do NOT copy any existing video's script, footage, title, thumbnail, characters, or copyrighted material.
-Choose one trend that can be transformed into a completely original AI animal-comedy short.
+Choose a completely original AI animal-comedy short. Make each daily concept meaningfully different.
 Prefer simple, visual, family-safe stories that work without context.
 Return ONLY valid JSON with this exact shape:
-{
+{{
   "title": "...",
   "description": "...",
   "hashtags": ["#..."],
   "tags": ["..."],
   "narration": "Bangla narration, 55-70 words",
   "scenes": [
-    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 5},
-    {"prompt": "vertical 9:16 visual prompt", "duration": 5}
+    {{"prompt": "vertical 9:16 visual prompt", "duration": 5}},
+    {{"prompt": "vertical 9:16 visual prompt", "duration": 5}},
+    {{"prompt": "vertical 9:16 visual prompt", "duration": 5}},
+    {{"prompt": "vertical 9:16 visual prompt", "duration": 5}},
+    {{"prompt": "vertical 9:16 visual prompt", "duration": 5}}
   ]
-}
-Keep the same main animal and visual identity across all scenes. Make the story original and comedic. Do not mention real people, copyrighted characters, movie/game characters, or existing brands.
+}}
+Keep the same main animal and visual identity across all scenes of this video. Make the story original and comedic. Do not mention real people, copyrighted characters, movie/game characters, or existing brands.
 """
     response = client.responses.create(
         model="gpt-5.6-luna",
@@ -86,12 +89,12 @@ def run_ffmpeg(args):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *args], check=True)
 
 
-def render_video(scenes, audio_path, output_path):
+def render_video(scenes, audio_path: Path, output_path: Path, work_dir: Path):
     clips = []
     for i, scene in enumerate(scenes):
-        image_path = WORK / f"image_{i}.png"
+        image_path = work_dir / f"image_{i}.png"
         generate_image(scene["prompt"], image_path)
-        clip = WORK / f"scene_{i}.mp4"
+        clip = work_dir / f"scene_{i}.mp4"
         clips.append(clip)
         duration = max(3, min(8, int(scene.get("duration", 5))))
         run_ffmpeg([
@@ -102,9 +105,9 @@ def render_video(scenes, audio_path, output_path):
             "-an", str(clip),
         ])
 
-    concat_file = WORK / "concat.txt"
+    concat_file = work_dir / "concat.txt"
     concat_file.write_text("\n".join(f"file '{p.as_posix()}'" for p in clips), encoding="utf-8")
-    silent_video = WORK / "silent.mp4"
+    silent_video = work_dir / "silent.mp4"
     run_ffmpeg(["-f", "concat", "-safe", "0", "-i", str(concat_file), "-c", "copy", str(silent_video)])
     run_ffmpeg([
         "-i", str(silent_video),
@@ -157,15 +160,37 @@ def upload_video(path: Path, content):
 
 
 def main():
-    content = ask_for_content()
-    (WORK / "content.json").write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Keep artifacts from all five videos for download/review.
+    if WORK.exists():
+        for child in WORK.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+            elif child.is_file():
+                child.unlink()
 
-    audio_path = WORK / "narration.mp3"
-    generate_voice(content["narration"], audio_path)
+    manifest = []
+    for index in range(1, VIDEO_COUNT + 1):
+        work_dir = WORK / f"video_{index}"
+        work_dir.mkdir(parents=True, exist_ok=True)
 
-    output_path = WORK / "output.mp4"
-    render_video(content["scenes"], audio_path, output_path)
-    upload_video(output_path, content)
+        content = ask_for_content(index)
+        (work_dir / "content.json").write_text(
+            json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+        audio_path = work_dir / "narration.mp3"
+        generate_voice(content["narration"], audio_path)
+
+        output_path = work_dir / f"short_{index}.mp4"
+        render_video(content["scenes"], audio_path, output_path, work_dir)
+
+        # Upload privately by default; user can change YOUTUBE_PRIVACY after testing.
+        upload_video(output_path, content)
+        manifest.append({"index": index, "title": content["title"], "file": str(output_path)})
+
+    (WORK / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 if __name__ == "__main__":
